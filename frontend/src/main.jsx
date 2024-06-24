@@ -5,6 +5,7 @@ import StationDetails from './Components/StationDetails.jsx'
 import Widget from './Components/Widget.jsx'
 import MetroNavigator from './Components/MetroNavigator.jsx'
 import MetroRoutePlanner from './Components/MetroRoutePlanner.jsx'
+import New from './Components/New.jsx'
 
 // import './index.css'
 
@@ -13,7 +14,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     {/* <App /> */}
     {/* <StationDetails /> */}
     {/* <MetroNavigator /> */}
-    <MetroRoutePlanner />
+    {/* <MetroRoutePlanner /> */}
     {/* <Widget /> */}
+    <New />
   </React.StrictMode>,
 )

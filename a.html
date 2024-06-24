@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delhi Metro Route Finder</title>
+</head>
+<body>
+    <h1>Delhi Metro Route Finder</h1>
+
+    <label for="startStation">Start Station:</label>
+    <input type="text" id="startStation" placeholder="Enter start station">
+
+    <label for="endStation">End Station:</label>
+    <input type="text" id="endStation" placeholder="Enter end station">
+
+    <button onclick="findRoute()">Find Route</button>
+
+    <div id="routeInfo">
+        <!-- Route information will be displayed here -->
+    </div>
+
+    <script>
+        function findRoute() {
+            const startStation = document.getElementById('startStation').value.trim();
+            const endStation = document.getElementById('endStation').value.trim();
+
+            if (!startStation || !endStation) {
+                alert('Please enter both start and end stations.');
+                return;
+            }
+
+            fetch(`http://localhost/dmn/DelhiMetro.php?start=${encodeURIComponent(startStation)}&end=${encodeURIComponent(endStation)}`)
+                .then(response => response.json())
+                .then(data => {
+                    displayRoute(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                });
+        }
+
+        function displayRoute(data) {
+            const routeInfoDiv = document.getElementById('routeInfo');
+            routeInfoDiv.innerHTML = ''; // Clear previous results
+
+            if (data.error) {
+                routeInfoDiv.innerHTML = `<p>${data.error}</p>`;
+                return;
+            }
+
+            const { path, numStops, lineInfo, interchanges } = data;
+
+            // Display basic route information
+            routeInfoDiv.innerHTML += `<p><strong>Number of Stops:</strong> ${numStops}</p>`;
+            routeInfoDiv.innerHTML += `<p><strong>Interchanges:</strong> ${interchanges}</p>`;
+
+            // Display detailed station-by-station route information
+            const ul = document.createElement('ul');
+            lineInfo.forEach(info => {
+                const li = document.createElement('li');
+                li.textContent = `${info.station} (${info.line})`;
+                ul.appendChild(li);
+            });
+            routeInfoDiv.appendChild(ul);
+        }
+    </script>
+</body>
+</html>

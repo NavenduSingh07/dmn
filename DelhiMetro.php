@@ -1,6 +1,10 @@
 <?php
 // DelhiMetro.php
 
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
+
 // Allow from any origin
 if (isset($_SERVER['HTTP_ORIGIN'])) {
     header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
@@ -22,12 +26,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 class DelhiMetro {
     private $graph = [];
     private $stations = [];
+    private $lines = [];
 
-    public function addConnection($station1, $station2) {
+    public function addConnection($station1, $station2, $line) {
         $this->graph[$station1][] = $station2;
         $this->graph[$station2][] = $station1;
         $this->stations[$station1] = true;
         $this->stations[$station2] = true;
+        $this->lines[$station1][$station2] = $line;
+        $this->lines[$station2][$station1] = $line;
     }
 
     public function dijkstra($start, $end) {
@@ -42,11 +49,24 @@ class DelhiMetro {
 
             if ($currentStation === $end) {
                 $path = [];
+                $interchanges = 0;
+                $currentLine = null;
+
                 while ($currentStation !== null) {
                     array_unshift($path, $currentStation);
+
+                    if ($previous[$currentStation] !== null) {
+                        $line = $this->getLine($currentStation, $previous[$currentStation]);
+                        if ($currentLine !== null && $line !== $currentLine) {
+                            $interchanges++;
+                        }
+                        $currentLine = $line;
+                    }
+
                     $currentStation = $previous[$currentStation];
                 }
-                return [$path, $distances[$end]];
+
+                return [$path, $distances[$end], $interchanges];
             }
 
             if (!isset($this->graph[$currentStation])) {
@@ -63,380 +83,207 @@ class DelhiMetro {
             }
         }
 
-        return [null, PHP_INT_MAX];
+        return [null, PHP_INT_MAX, 0];
+    }
+
+    public function getLine($station1, $station2) {
+        return $this->lines[$station1][$station2];
+    }
+
+    public function getLineInfo($station) {
+        return $this->lines[$station];
     }
 }
 
 // Initialize and set up the Delhi Metro system
 $metro = new DelhiMetro();
 
-// Add connections (this is a simplified version, you'd need to add all connections)
+// Add connections (this is a simplified version, you'd need to add all connections with line information)
 $connections = [
     // Yellow Line
-    ["Samaypur Badli", "Rohini Sector 18"],
-    ["Rohini Sector 18", "Badli Mor"],
-    ["Badli Mor", "Jahangirpuri"],
-    ["Jahangirpuri", "Adarsh Nagar"],
-    ["Adarsh Nagar", "Azadpur"],
-    ["Azadpur", "Model Town"],
-    ["Model Town", "G.T.B. Nagar"],
-    ["G.T.B. Nagar", "Vishwa Vidyalaya"],
-    ["Vishwa Vidyalaya", "Vidhan Sabha"],
-    ["Vidhan Sabha", "Civil Lines"],
-    ["Civil Lines", "Kashmere Gate"],
-    ["Kashmere Gate", "Chandni Chowk"],
-    ["Chandni Chowk", "Chawri Bazar"],
-    ["Chawri Bazar", "New Delhi"],
-    ["New Delhi", "Rajiv Chowk"],
-    ["Rajiv Chowk", "Patel Chowk"],
-    ["Patel Chowk", "Central Secretariat"],
-    ["Central Secretariat", "Udyog Bhawan"],
-    ["Udyog Bhawan", "Race Course"],
-    ["Race Course", "Jor Bagh"],
-    ["Jor Bagh", "INA"],
-    ["INA", "AIIMS"],
-    ["AIIMS", "Green Park"],
-    ["Green Park", "Hauz Khas"],
-    ["Hauz Khas", "Malviya Nagar"],
-    ["Malviya Nagar", "Saket"],
-    ["Saket", "Qutab Minar"],
-    ["Qutab Minar", "Chhattarpur"],
-    ["Chhattarpur", "Sultanpur"],
-    ["Sultanpur", "Ghitorni"],
-    ["Ghitorni", "Arjan Garh"],
-    ["Arjan Garh", "Guru Dronacharya"],
-    ["Guru Dronacharya", "Sikanderpur"],
-    ["Sikanderpur", "MG Road"],
-    ["MG Road", "IFFCO Chowk"],
-    ["IFFCO Chowk", "HUDA City Centre"],
-["Dwarka Sector 21", "Dwarka Sector 8"],
-["Dwarka Sector 8", "Dwarka Sector 9"],
-["Dwarka Sector 9", "Dwarka Sector 10"],
-["Dwarka Sector 10", "Dwarka Sector 11"],
-["Dwarka Sector 11", "Dwarka Sector 12"],
-["Dwarka Sector 12", "Dwarka Sector 13"],
-["Dwarka Sector 13", "Dwarka Sector 14"],
-["Dwarka Sector 14", "Dwarka"],
-["Dwarka", "Dwarka Mor"],
-["Dwarka Mor", "Nawada"],
-["Nawada", "Uttam Nagar West"],
-["Uttam Nagar West", "Uttam Nagar East"],
-["Uttam Nagar East", "Janakpuri West"],
-["Janakpuri West", "Janakpuri East"],
-["Janakpuri East", "Tilak Nagar"],
-["Tilak Nagar", "Subhash Nagar"],
-["Subhash Nagar", "Tagore Garden"],
-["Tagore Garden", "Rajouri Garden"],
-["Rajouri Garden", "Ramesh Nagar"],
-["Ramesh Nagar", "Moti Nagar"],
-["Moti Nagar", "Kirti Nagar"],
-["Kirti Nagar", "Shadipur"],
-["Shadipur", "Patel Nagar"],
-["Patel Nagar", "Rajendra Place"],
-["Rajendra Place", "Karol Bagh"],
-["Karol Bagh", "Jhandewalan"],
-["Jhandewalan", "R.K. Ashram Marg"],
-["R.K. Ashram Marg", "Rajiv Chowk"],
-["Rajiv Chowk", "Barakhamba Road"],
-["Barakhamba Road", "Mandi House"],
-["Mandi House", "Supreme Court"],
-["Supreme Court", "Indraprastha"],
-["Indraprastha", "Yamuna Bank"],
-["Yamuna Bank", "Laxmi Nagar"],
-["Laxmi Nagar", "Nirman Vihar"],
-["Nirman Vihar", "Preet Vihar"],
-["Preet Vihar", "Karkarduma"],
-["Karkarduma", "Anand Vihar"],
-["Anand Vihar", "Kaushambi"],
-["Kaushambi", "Vaishali"],
-["Yamuna Bank", "Akshardham"],
-["Akshardham", "Mayur Vihar-I"],
-["Mayur Vihar-I", "Mayur Vihar Extension"],
-["Mayur Vihar Extension", "New Ashok Nagar"],
-["New Ashok Nagar", "Noida Sector 15"],
-["Noida Sector 15", "Noida Sector 16"],
-["Noida Sector 16", "Noida Sector 18"],
-["Noida Sector 18", "Botanical Garden"],
-["Botanical Garden", "Golf Course"],
-["Golf Course", "Noida City Centre"],
-["Noida City Centre", "Noida Sector 34"],
-["Noida Sector 34", "Noida Sector 52"],
-["Noida Sector 52", "Noida Sector 61"],
-["Noida Sector 61", "Noida Sector 59"],
-["Noida Sector 59", "Noida Sector 62"],
-["Noida Sector 62", "Noida Electronic City"],
+    ["Samaypur Badli", "Rohini Sector 18", "Yellow"],
+    ["Rohini Sector 18", "Badli Mor", "Yellow"],
+    ["Badli Mor", "Jahangirpuri", "Yellow"],
+    ["Jahangirpuri", "Adarsh Nagar", "Yellow"],
+    ["Adarsh Nagar", "Azadpur", "Yellow"],
+    ["Azadpur", "Model Town", "Yellow"],
+    ["Model Town", "G.T.B. Nagar", "Yellow"],
+    ["G.T.B. Nagar", "Vishwa Vidyalaya", "Yellow"],
+    ["Vishwa Vidyalaya", "Vidhan Sabha", "Yellow"],
+    ["Vidhan Sabha", "Civil Lines", "Yellow"],
+    ["Civil Lines", "Kashmere Gate", "Yellow"],
+    ["Kashmere Gate", "Chandni Chowk", "Yellow"],
+    ["Chandni Chowk", "Chawri Bazar", "Yellow"],
+    ["Chawri Bazar", "New Delhi", "Yellow"],
+    ["Rajiv Chowk", "Patel Chowk", "Yellow"],
+    ["Patel Chowk", "Central Secretariat", "Yellow"],
+    ["Central Secretariat", "Udyog Bhawan", "Yellow"],
+    ["Udyog Bhawan", "Lok Kalyan Marg", "Yellow"],
+    ["Lok Kalyan Marg", "Jor Bagh", "Yellow"],
+    ["Jor Bagh", "INA", "Yellow"],
+    ["INA", "AIIMS", "Yellow"],
 
-// Red Line
-["Rithala", "Rohini West"],
-["Rohini West", "Rohini East"],
-["Rohini East", "Pitampura"],
-["Pitampura", "Kohat Enclave"],
-["Kohat Enclave", "Netaji Subhash Place"],
-["Netaji Subhash Place", "Keshav Puram"],
-["Keshav Puram", "Kanhaiya Nagar"],
-["Kanhaiya Nagar", "Inderlok"],
-["Inderlok", "Shastri Nagar"],
-["Shastri Nagar", "Pratap Nagar"],
-["Pratap Nagar", "Pulbangash"],
-["Pulbangash", "Tis Hazari"],
-["Tis Hazari", "Kashmere Gate"],
-["Kashmere Gate", "Shastri Park"],
-["Shastri Park", "Seelampur"],
-["Seelampur", "Welcome"],
-["Welcome", "Shahdara"],
-["Shahdara", "Mansarovar Park"],
-["Mansarovar Park", "Jhilmil"],
-["Jhilmil", "Dilshad Garden"],
-["Dilshad Garden", "Jharoda Kalan"],
-["Jharoda Kalan", "Nand Nagri"],
-["Nand Nagri", "Shyam Park"],
-["Shyam Park", "Raj Bagh"],
-["Raj Bagh", "Major Mohit Sharma Rajendra Nagar"],
-["Major Mohit Sharma Rajendra Nagar", "Mohan Nagar"],
-["Mohan Nagar", "Arthala"],
-["Arthala", "Hindon River"],
-["Hindon River", "Shaheed Sthal (New Bus Adda)"],
+    // Blue Line
+    ["Dwarka Sector 21", "Dwarka Sector 8", "Blue"],
+    ["Dwarka Sector 8", "Dwarka Sector 9", "Blue"],
+    ["Dwarka Sector 9", "Dwarka Sector 10", "Blue"],
+    ["Dwarka Sector 10", "Dwarka Sector 11", "Blue"],
+    ["Dwarka Sector 11", "Dwarka Sector 12", "Blue"],
+    ["Dwarka Sector 12", "Dwarka Sector 13", "Blue"],
+    ["Dwarka Sector 13", "Dwarka Sector 14", "Blue"],
+    ["Dwarka Sector 14", "Dwarka", "Blue"],
+    ["Dwarka", "Nawada", "Blue"],
+    ["Nawada", "Uttam Nagar West", "Blue"],
+    ["Uttam Nagar West", "Uttam Nagar East", "Blue"],
+    ["Uttam Nagar East", "Janakpuri West", "Blue"],
+    ["Janakpuri West", "Janakpuri East", "Blue"],
+    ["Janakpuri East", "Tilak Nagar", "Blue"],
+    ["Tilak Nagar", "Subhash Nagar", "Blue"],
+    ["Subhash Nagar", "Tagore Garden", "Blue"],
+    ["Tagore Garden", "Rajouri Garden", "Blue"],
+    ["Rajouri Garden", "Ramesh Nagar", "Blue"],
+    ["Ramesh Nagar", "Moti Nagar", "Blue"],
+    ["Moti Nagar", "Kirti Nagar", "Blue"],
+    ["Kirti Nagar", "Shadipur", "Blue"],
+    ["Shadipur", "Patel Nagar", "Blue"],
+    ["Patel Nagar", "Rajendra Place", "Blue"],
+    ["Rajendra Place", "Karol Bagh", "Blue"],
+    ["Karol Bagh", "Jhandewalan", "Blue"],
+    ["Jhandewalan", "R K Ashram Marg", "Blue"],
+    ["R K Ashram Marg", "Rajiv Chowk", "Blue"],
+    ["Rajiv Chowk", "Barakhamba Road", "Blue"],
+    ["Barakhamba Road", "Mandi House", "Blue"],
+    ["Mandi House", "Supreme Court", "Blue"],
+    ["Supreme Court", "Indraprastha", "Blue"],
+    ["Indraprastha", "Yamuna Bank", "Blue"],
 
-// Green Line
-["Brigadier Hoshiar Singh", "Bahadurgarh City"],
-["Bahadurgarh City", "Pandit Shree Ram Sharma"],
-["Pandit Shree Ram Sharma", "Tikri Border"],
-["Tikri Border", "Tikri Kalan"],
-["Tikri Kalan", "Ghevra"],
-["Ghevra", "Mundka Industrial Area"],
-["Mundka Industrial Area", "Mundka"],
-["Mundka", "Rajdhani Park"],
-["Rajdhani Park", "Nangloi Railway Station"],
-["Nangloi Railway Station", "Nangloi"],
-["Nangloi", "Surajmal Stadium"],
-["Surajmal Stadium", "Udyog Nagar"],
-["Udyog Nagar", "Peera Garhi"],
-["Peera Garhi", "Paschim Vihar West"],
-["Paschim Vihar West", "Paschim Vihar East"],
-["Paschim Vihar East", "Madipur"],
-["Madipur", "Shivaji Park"],
-["Shivaji Park", "Punjabi Bagh"],
-["Punjabi Bagh", "Ashok Park Main"],
-["Ashok Park Main", "Satguru Ram Singh Marg"],
-["Satguru Ram Singh Marg", "Kirti Nagar"],
+    // Red Line
+    ["Rithala", "Rohini West", "Red"],
+    ["Rohini West", "Rohini East", "Red"],
+    ["Rohini East", "Pitampura", "Red"],
+    ["Pitampura", "Kohat Enclave", "Red"],
+    ["Kohat Enclave", "Netaji Subhash Place", "Red"],
+    ["Netaji Subhash Place", "Keshav Puram", "Red"],
+    ["Keshav Puram", "Kanhaiya Nagar", "Red"],
+    ["Kanhaiya Nagar", "Inderlok", "Red"],
+    ["Inderlok", "Shastri Nagar", "Red"],
+    ["Shastri Nagar", "Pratap Nagar", "Red"],
+    ["Pratap Nagar", "Pul Bangash", "Red"],
+    ["Pul Bangash", "Tis Hazari", "Red"],
+    ["Tis Hazari", "Kashmere Gate", "Red"],
+    ["Kashmere Gate", "Shastri Park", "Red"],
+    ["Shastri Park", "Seelampur", "Red"],
+    ["Seelampur", "Welcome", "Red"],
+    ["Welcome", "Shahdara", "Red"],
+    ["Shahdara", "Mansarovar Park", "Red"],
+    ["Mansarovar Park", "Jhilmil", "Red"],
+    ["Jhilmil", "Dilshad Garden", "Red"],
 
-// Violet Line
-["Kashmere Gate", "Lal Quila"],
-["Lal Quila", "Jama Masjid"],
-["Jama Masjid", "Delhi Gate"],
-["Delhi Gate", "ITO"],
-["ITO", "Mandi House"],
-["Mandi House", "Janpath"],
-["Janpath", "Central Secretariat"],
-["Central Secretariat", "Khan Market"],
-["Khan Market", "Jawaharlal Nehru Stadium"],
-["Jawaharlal Nehru Stadium", "Jangpura"],
-["Jangpura", "Lajpat Nagar"],
-["Lajpat Nagar", "Moolchand"],
-["Moolchand", "Kailash Colony"],
-["Kailash Colony", "Nehru Place"],
-["Nehru Place", "Kalkaji Mandir"],
-["Kalkaji Mandir", "Govind Puri"],
-["Govind Puri", "Harkesh Nagar Okhla"],
-["Harkesh Nagar Okhla", "Jasola Apollo"],
-["Jasola Apollo", "Sarita Vihar"],
-["Sarita Vihar", "Mohan Estate"],
-["Mohan Estate", "Tughlakabad"],
-["Tughlakabad", "Badarpur"],
-["Badarpur", "Sarai"],
-["Sarai", "NHPC Chowk"],
-["NHPC Chowk", "Mewala Maharajpur"],
-["Mewala Maharajpur", "Sector 28"],
-["Sector 28", "Badkhal Mor"],
-["Badkhal Mor", "Old Faridabad"],
-["Old Faridabad", "Neelam Chowk Ajronda"],
-["Neelam Chowk Ajronda", "Bata Chowk"],
-["Bata Chowk", "Escorts Mujesar"],
-["Escorts Mujesar", "Sant Surdas (Sihi)"],
-["Sant Surdas (Sihi)", "Raja Nahar Singh"],
+    // Green Line
+    ["Brigadier Hoshiar Singh", "Bahadurgarh City", "Green"],
+    ["Bahadurgarh City", "Bus Stand", "Green"],
+    ["Bus Stand", "Modern Industrial Estate", "Green"],
+    ["Modern Industrial Estate", "IAS Colony", "Green"],
+    ["IAS Colony", "Udyog Nagar", "Green"],
+    ["Udyog Nagar", "Peeragarhi", "Green"],
+    ["Peeragarhi", "Paschim Vihar West", "Green"],
+    ["Paschim Vihar West", "Paschim Vihar East", "Green"],
+    ["Paschim Vihar East", "Madipur", "Green"],
+    ["Madipur", "Shivaji Park", "Green"],
+    ["Shivaji Park", "Punjabi Bagh", "Green"],
+    ["Punjabi Bagh", "Ashok Park Main", "Green"],
 
-// Pink Line
-["Majlis Park", "Azadpur"],
-["Azadpur", "Shalimar Bagh"],
-["Shalimar Bagh", "Netaji Subhash Place"],
-["Netaji Subhash Place", "Shakurpur"],
-["Shakurpur", "Punjabi Bagh West"],
-["Punjabi Bagh West", "ESI Hospital"],
-["ESI Hospital", "Rajouri Garden"],
-["Rajouri Garden", "Maya Puri"],
-["Maya Puri", "Naraina Vihar"],
-["Naraina Vihar", "Delhi Cantt"],
-["Delhi Cantt", "Durgabai Deshmukh South Campus"],
-["Durgabai Deshmukh South Campus", "Sir Vishweshwaraiah Moti Bagh"],
-["Sir Vishweshwaraiah Moti Bagh", "Bhikaji Cama Place"],
-["Bhikaji Cama Place", "Sarojini Nagar"],
-["Sarojini Nagar", "INA"],
-["INA", "South Extension"],
-["South Extension", "Lajpat Nagar"],
-["Lajpat Nagar", "Vinobapuri"],
-["Vinobapuri", "Ashram"],
-["Ashram", "Hazrat Nizamuddin"],
-["Hazrat Nizamuddin", "Mayur Vihar-I"],
-["Mayur Vihar-I", "Mayur Vihar Pocket I"],
-["Mayur Vihar Pocket I", "Trilokpuri Sanjay Lake"],
-["Trilokpuri Sanjay Lake", "East Vinod Nagar - Mayur Vihar-II"],
-["East Vinod Nagar - Mayur Vihar-II", "Mandawali - West Vinod Nagar"],
-["Mandawali - West Vinod Nagar", "IP Extension"],
-["IP Extension", "Anand Vihar"],
-["Anand Vihar", "Karkarduma"],
-["Karkarduma", "Karkarduma Court"],
-["Karkarduma Court", "Krishna Nagar"],
-["Krishna Nagar", "East Azad Nagar"],
-["East Azad Nagar", "Welcome"],
-["Welcome", "Jaffrabad"],
-["Jaffrabad", "Maujpur - Babarpur"],
-["Maujpur - Babarpur", "Gokulpuri"],
-["Gokulpuri", "Johri Enclave"],
-["Johri Enclave", "Shiv Vihar"],
+    // Violet Line
+    ["Kashmere Gate", "Lal Quila", "Violet"],
+    ["Lal Quila", "Jama Masjid", "Violet"],
+    ["Jama Masjid", "Delhi Gate", "Violet"],
+    ["Delhi Gate", "ITO", "Violet"],
+    ["ITO", "Mandi House", "Violet"],
+    ["Mandi House", "Janpath", "Violet"],
+    ["Janpath", "Central Secretariat", "Violet"],
+    ["Central Secretariat", "Khan Market", "Violet"],
+    ["Khan Market", "Jawaharlal Nehru Stadium", "Violet"],
+    ["Jawaharlal Nehru Stadium", "Jangpura", "Violet"],
+    ["Jangpura", "Lajpat Nagar", "Violet"],
+    ["Lajpat Nagar", "Moolchand", "Violet"],
+    ["Moolchand", "Kailash Colony", "Violet"],
+    ["Kailash Colony", "Nehru Place", "Violet"],
+    ["Nehru Place", "Kalkaji Mandir", "Violet"],
+    ["Kalkaji Mandir", "Govind Puri", "Violet"],
+    ["Govind Puri", "Harkesh Nagar", "Violet"],
+    ["Harkesh Nagar", "Jasola Apollo", "Violet"],
+    ["Jasola Apollo", "Sarita Vihar", "Violet"],
+    ["Sarita Vihar", "Mohan Estate", "Violet"],
+    ["Mohan Estate", "Tughlakabad", "Violet"],
 
-// Magenta Line (partial, as not all stations are visible)
-["Janakpuri West", "Dabri Mor"],
-["Dabri Mor", "Dashrathpuri"],
-["Dashrathpuri", "Palam"],
-["Palam", "Sadar Bazaar"],
-["Sadar Bazaar", "Terminal 1 IGI Airport"],
-["Terminal 1 IGI Airport", "Shankar Vihar"],
-["Shankar Vihar", "Vasant Vihar"],
-["Vasant Vihar", "Munirka"],
-["Munirka", "R.K. Puram"],
-["R.K. Puram", "IIT"],
-["IIT", "Hauz Khas"],
-["Hauz Khas", "Panchsheel Park"],
-["Panchsheel Park", "Chirag Delhi"],
-["Chirag Delhi", "Greater Kailash"],
-["Greater Kailash", "Nehru Enclave"],
-["Nehru Enclave", "Kalkaji Mandir"],
-["Kalkaji Mandir", "Okhla NSIC"],
-// Magenta Line (continued)
-    ["Okhla NSIC", "Sukhdev Vihar"],
-    ["Sukhdev Vihar", "Jamia Millia Islamia"],
-    ["Jamia Millia Islamia", "Okhla Vihar"],
-    ["Okhla Vihar", "Jasola Vihar Shaheen Bagh"],
-    ["Jasola Vihar Shaheen Bagh", "Kalindi Kunj"],
-    ["Kalindi Kunj", "Okhla Bird Sanctuary"],
-    ["Okhla Bird Sanctuary", "Botanical Garden"],
+    // Pink Line (partial)
+    ["Majlis Park", "Azadpur", "Pink"],
+    ["Azadpur", "Shalimar Bagh", "Pink"],
+    ["Shalimar Bagh", "Netaji Subhash Place", "Pink"],
 
-    // Airport Express Line
-    ["New Delhi", "Shivaji Stadium"],
-    ["Shivaji Stadium", "Dhaula Kuan"],
-    ["Dhaula Kuan", "Delhi Aerocity"],
-    ["Delhi Aerocity", "IGI Airport"],
-    ["IGI Airport", "Dwarka Sector 21"],
+    // Magenta Line (partial)
+    ["Janakpuri West", "Terminal 1 IGI Airport", "Magenta"],
+    ["Terminal 1 IGI Airport", "Sadar Bazar", "Magenta"],
+    ["Sadar Bazar", "Palam", "Magenta"],
 
-    // Grey Line
-    ["Dwarka", "Nangli"],
-    ["Nangli", "Najafgarh"],
-    ["Najafgarh", "Dhansa Bus Stand"],
-
-    // Rapid Metro Gurgaon (connected to Yellow Line)
-    ["Sikanderpur", "Phase 1"],
-    ["Phase 1", "Phase 2"],
-    ["Phase 2", "Phase 3"],
-    ["Phase 3", "Cyber City"],
-    ["Cyber City", "Belvedere Towers"],
-    ["Belvedere Towers", "Moulsari Avenue"],
-    ["Moulsari Avenue", "Sector 53-54"],
-    ["Sector 53-54", "Sector 54 Chowk"],
-    ["Sector 54 Chowk", "Sector 55-56"],
-
-    // Noida-Greater Noida Line (Aqua Line, partially visible)
-    ["Noida Sector 51", "Noida Sector 50"],
-    ["Noida Sector 50", "Noida Sector 76"],
-    ["Noida Sector 76", "Noida Sector 101"],
-    ["Noida Sector 101", "Noida Sector 81"],
-    ["Noida Sector 81", "NSEZ"],
-    ["NSEZ", "Noida Sector 83"],
-    ["Noida Sector 83", "Noida Sector 137"],
-    ["Noida Sector 137", "Noida Sector 142"],
-    ["Noida Sector 142", "Noida Sector 143"],
-    ["Noida Sector 143", "Noida Sector 144"],
-    ["Noida Sector 144", "Noida Sector 145"],
-    ["Noida Sector 145", "Noida Sector 146"],
-    ["Noida Sector 146", "Noida Sector 147"],
-    ["Noida Sector 147", "Noida Sector 148"],
-    ["Noida Sector 148", "Knowledge Park 2"],
-    ["Knowledge Park 2", "Pari Chowk"],
-    ["Pari Chowk", "Alpha 1"],
-    ["Alpha 1", "Delta 1"],
-    ["Delta 1", "GNIDA Office"],
-  // Magenta Line (continued)
-    ["Okhla NSIC", "Sukhdev Vihar"],
-    ["Sukhdev Vihar", "Jamia Millia Islamia"],
-    ["Jamia Millia Islamia", "Okhla Vihar"],
-    ["Okhla Vihar", "Jasola Vihar Shaheen Bagh"],
-    ["Jasola Vihar Shaheen Bagh", "Kalindi Kunj"],
-    ["Kalindi Kunj", "Okhla Bird Sanctuary"],
-    ["Okhla Bird Sanctuary", "Botanical Garden"],
-
-    // Airport Express Line
-    ["New Delhi", "Shivaji Stadium"],
-    ["Shivaji Stadium", "Dhaula Kuan"],
-    ["Dhaula Kuan", "Delhi Aerocity"],
-    ["Delhi Aerocity", "IGI Airport"],
-    ["IGI Airport", "Dwarka Sector 21"],
-
-    // Grey Line
-    ["Dwarka", "Nangli"],
-    ["Nangli", "Najafgarh"],
-    ["Najafgarh", "Dhansa Bus Stand"],
-
-    // Rapid Metro Gurgaon (connected to Yellow Line)
-    ["Sikanderpur", "Phase 1"],
-    ["Phase 1", "Phase 2"],
-    ["Phase 2", "Phase 3"],
-    ["Phase 3", "Cyber City"],
-    ["Cyber City", "Belvedere Towers"],
-    ["Belvedere Towers", "Moulsari Avenue"],
-    ["Moulsari Avenue", "Sector 53-54"],
-    ["Sector 53-54", "Sector 54 Chowk"],
-    ["Sector 54 Chowk", "Sector 55-56"],
-
-    // Noida-Greater Noida Line (Aqua Line, partially visible)
-    ["Noida Sector 51", "Noida Sector 50"],
-    ["Noida Sector 50", "Noida Sector 76"],
-    ["Noida Sector 76", "Noida Sector 101"],
-    ["Noida Sector 101", "Noida Sector 81"],
-    ["Noida Sector 81", "NSEZ"],
-    ["NSEZ", "Noida Sector 83"],
-    ["Noida Sector 83", "Noida Sector 137"],
-    ["Noida Sector 137", "Noida Sector 142"],
-    ["Noida Sector 142", "Noida Sector 143"],
-    ["Noida Sector 143", "Noida Sector 144"],
-    ["Noida Sector 144", "Noida Sector 145"],
-    ["Noida Sector 145", "Noida Sector 146"],
-    ["Noida Sector 146", "Noida Sector 147"],
-    ["Noida Sector 147", "Noida Sector 148"],
-    ["Noida Sector 148", "Knowledge Park 2"],
-    ["Knowledge Park 2", "Pari Chowk"],
-    ["Pari Chowk", "Alpha 1"],
-    ["Alpha 1", "Delta 1"],
-    ["Delta 1", "GNIDA Office"]
-
+    // Interchanges
+    ["Rajiv Chowk", "New Delhi", "Yellow"],
+    ["Rajiv Chowk", "R K Ashram Marg", "Blue"],
+    ["Kashmere Gate", "Chandni Chowk", "Yellow"],
+    ["Kashmere Gate", "Tis Hazari", "Red"],
+    ["Kashmere Gate", "Lal Quila", "Violet"],
+    ["Central Secretariat", "Udyog Bhawan", "Yellow"],
+    ["Central Secretariat", "Khan Market", "Violet"],
+    ["Mandi House", "Supreme Court", "Blue"],
+    ["Mandi House", "Janpath", "Violet"],
+    ["Inderlok", "Kanhaiya Nagar", "Red"],
+    ["Inderlok", "Ashok Park Main", "Green"],
+    ["Kirti Nagar", "Shadipur", "Blue"],
+    ["Yamuna Bank", "Indraprastha", "Blue"],
+    ["New Delhi", "Chawri Bazar", "Yellow"],
+    ["Azadpur", "Model Town", "Yellow"],
+    ["Azadpur", "Shalimar Bagh", "Pink"],
+    ["Netaji Subhash Place", "Keshav Puram", "Red"],
+    ["Netaji Subhash Place", "Shalimar Bagh", "Pink"],
+    ["Janakpuri West", "Uttam Nagar East", "Blue"],
+    ["Janakpuri West", "Terminal 1 IGI Airport", "Magenta"]
 ];
 
 foreach ($connections as $connection) {
-    $metro->addConnection($connection[0], $connection[1]);
+    list($station1, $station2, $line) = $connection;
+    $metro->addConnection($station1, $station2, $line);
 }
 
-// API endpoint
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['start']) && isset($_GET['end'])) {
+if (isset($_GET['start']) && isset($_GET['end'])) {
     $start = $_GET['start'];
     $end = $_GET['end'];
-    
-    list($path, $numStops) = $metro->dijkstra($start, $end);
-    
-    header('Content-Type: application/json');
-    echo json_encode([
-        'path' => $path,
-        'numStops' => $numStops
-    ]);
+    list($path, $numStops, $interchanges) = $metro->dijkstra($start, $end);
+
+    if ($path === null) {
+        $response = ["error" => "No route found."];
+    } else {
+        $lineInfo = [];
+        for ($i = 0; $i < count($path) - 1; $i++) {
+            $station = $path[$i];
+            $nextStation = $path[$i + 1];
+            $line = $metro->getLine($station, $nextStation); // Using public method now
+            $lineInfo[] = [
+                "station" => $station,
+                "line" => $line,
+                "nextStation" => $nextStation
+            ];
+        }
+
+        $response = [
+            "path" => $path,
+            "total_stations" => $numStops,
+            "interchanges" => $interchanges,
+            "line_info" => $lineInfo
+        ];
+    }
+
+    echo json_encode($response);
 } else {
-    // Handle invalid requests
-    http_response_code(400);
-    echo json_encode(['error' => 'Invalid request. Please provide start and end parameters.']);
+    echo json_encode(["error" => "Invalid parameters."]);
 }
+?>
